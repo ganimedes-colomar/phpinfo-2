@@ -1,0 +1,26 @@
+name: CI
+on:
+        push:
+                branches:
+                -
+                        docker
+jobs:
+        docker:
+                runs-on: ubuntu-18.04
+                steps:
+                -
+                        name: checkout
+                        uses: actions/checkout@v2
+                -
+                        name: test
+                        run: docker build -t test .
+                -
+                        name: docker run
+                        run: docker run -d --name test test
+                -
+                        name: wait Up
+                        run: |
+                                while true; do
+                                        sleep 10;
+                                        docker exec test ps | grep 'php -f index.php' && break
+                                done;
