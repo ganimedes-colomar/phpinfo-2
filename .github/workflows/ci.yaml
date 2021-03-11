@@ -49,9 +49,6 @@ jobs:
                 -
                         name: sed2
                         run: sed -i /node.role/s/worker/manager/ ${compose}
-                -
-                        name: docker run
-                        run: docker run -d --name test test
                         # Deploy in Openshift
                         # oc apply -f ${compose}
                         # Deploy in Kubernetes
