@@ -27,15 +27,18 @@ jobs:
                         name: docker run
                         run: docker run -d --name test test
                 -
-                        name: wait Up
+                        name: docker exec
                         run: |
                                 while true; do
                                         sleep 10;
                                         docker exec test ps | grep 'php -f index.php' && break
                                 done;
+                -
+                        name: docker logs
+                        run: |
                                 while true; do
                                         sleep 10;
-                                        docker logs test 2>& 1 | grep 'PHP .* Development Server started' && break
+                                        docker logs test 2>& 1 | grep 'PHP .* Development Server .* started' && break
                                 done;
         swarm:
                 runs-on: ubuntu-18.04
@@ -72,7 +75,7 @@ jobs:
                         run: |
                                 while true; do
                                         sleep 10;
-                                        docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server started' && break
+                                        docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break
                                 done;
         kubernetes:
                 runs-on: ubuntu-18.04
