@@ -1,4 +1,7 @@
 name: CI
+env:
+        compose: etc/swarm/manifests/phpinfo-2.yaml
+        project: phpinfo-2
 on:
         push:
                 branches:
@@ -28,3 +31,43 @@ jobs:
                                         sleep 10;
                                         docker logs test 2>& 1 | grep 'PHP .* Development Server started' && break
                                 done;
+        swarm:
+                runs-on: ubuntu-18.04
+                steps:
+                -
+                        name: checkout
+                        uses: actions/checkout@v2
+                -
+                        name: test
+                        run: docker build -t ganimedescolomar/phpinfo-2:testing .
+                -
+                        name: docker swarm init
+                        run: docker swarm init --advertise-addr lo
+                -
+                        name: sed
+                        run: sed -i /image:/s/latest/testing/ ${compose}
+                -
+                        name: sed2
+                        run: sed -i /node.role/s/worker/manager/ ${compose}
+                -
+                        name: docker run
+                        run: docker run -d --name test test
+                        # Deploy in Openshift
+                        # oc apply -f ${compose}
+                        # Deploy in Kubernetes
+                        # 
+                -
+                        name: deploy
+                        run: docker stack deploy -c ${compose} ${project}
+                -
+                        name: wait Up
+                        run: |
+                                while true; do
+                                        sleep 10;
+                                        docker service ls | grep "${project}.*\([0-9]\)/\1" && break
+                                done;
+                                while true; do
+                                        sleep 10;
+                                        docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server started' && break
+                                done;
+
