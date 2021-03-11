@@ -80,7 +80,7 @@ spec:
         ports:
         -
                 port: 8080
-                tagetPort: 8080
+                targetPort: 8080
         selector:
                 app: phpinfo-2
         type: ClusterIP
