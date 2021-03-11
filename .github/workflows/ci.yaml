@@ -103,14 +103,14 @@ jobs:
                                 sudo swapoff --all
                                 sudo kubeadm init --upload-certs --control-plane-endpoint kube-apiserver --pod-network-cidr 192.168.0.0/16 --ignore-preflight-errors all
                 -
-                        name: create network
-                        run: sudo kubectl apply -f https://docs.projectcalico.org/v3.17/manifests/calico.yaml
-                -
                         name: credentials
                         run: |
                                 mkdir -p ${HOME}/.kube
                                 sudo cp /etc/kubernetes/admin.conf ${HOME}/.kube/config
                                 sudo chown -R $( id -u ):( id -g ) ${HOME}/.kube
+                -
+                        name: create network
+                        run: sudo kubectl apply -f https://docs.projectcalico.org/v3.17/manifests/calico.yaml
                 -
                         name: edit kube_compose
                         run: |
