@@ -107,7 +107,7 @@ jobs:
                         run: |
                                 mkdir -p ${HOME}/.kube
                                 sudo cp /etc/kubernetes/admin.conf ${HOME}/.kube/config
-                                sudo chown -R $( id -u ):( id -g ) ${HOME}/.kube
+                                sudo chown -R $( id -u ):$( id -g ) ${HOME}/.kube
                 -
                         name: create network
                         run: sudo kubectl apply -f https://docs.projectcalico.org/v3.17/manifests/calico.yaml
