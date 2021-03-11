@@ -1,3 +1,8 @@
+
+
+
+
+
 name: CI
 env:
         compose: etc/swarm/manifests/phpinfo-2.yaml
@@ -57,6 +62,56 @@ jobs:
                         name: deploy
                         run: docker stack deploy -c ${compose} ${project}
                 -
+                        name: docker service ls
+                        run: |
+                                while true; do
+                                        sleep 10;
+                                        docker service ls | grep "${project}.*\([0-9]\)/\1" && break
+                                done;
+                -
+                        name: docker service logs
+                        run: |
+                                while true; do
+                                        sleep 10;
+                                        docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server started' && break
+                                done;
+        kubernetes:
+                runs-on: ubuntu-18.04
+                steps:
+                -
+                        name: checkout
+                        uses: actions/checkout@v2
+                -
+                        name: test
+                        run: docker build -t ganimedescolomar/phpinfo-2:testing .
+                -
+                        name: install kubernetes
+                        run: |
+                                sudo apt-get update
+                                sudo apt-get install -y docker.io
+                                sudo systemctl enable --now docker
+                                curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+                                echo deb http://apt.kubernetes.io/ kubernetes-xenial main | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+                                sudo apt-get update
+                                sudo apt-get install -y --allow-downgrades kubelet-1.18.14-00 kubeadm-1.18.14-00 kubectl=1.18.14-00
+                                sudo systemctl enable --now kubelet
+                -
+                        name: init kubernetes
+                        run: docker build -t ganimedescolomar/phpinfo-2:testing .
+                -
+                        name: sed
+                        run: sed -i /image:/s/latest/testing/ ${compose}
+                -
+                        name: sed2
+                        run: sed -i /node.role/s/worker/manager/ ${compose}
+                        # Deploy in Openshift
+                        # oc apply -f ${compose}
+                        # Deploy in Kubernetes
+                        # 
+                -
+                        name: deploy
+                        run: docker stack deploy -c ${compose} ${project}
+                -
                         name: wait Up
                         run: |
                                 while true; do
@@ -67,4 +122,12 @@ jobs:
                                         sleep 10;
                                         docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server started' && break
                                 done;
+
+
+
+
+
+
+
+
 
