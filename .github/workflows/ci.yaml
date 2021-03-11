@@ -6,8 +6,8 @@
 name: CI
 env:
         project: phpinfo-2
-        swarm_compose: etc/swarm/manifests/${project}.yaml
-        kube_compose: etc/kubernetes/manifests/${project}.yaml
+        swarm_compose: etc/swarm/manifests/phpinfo-2.yaml
+        kube_compose: etc/kubernetes/manifests/phpinfo-2.yaml
 on:
         push:
                 branches:
