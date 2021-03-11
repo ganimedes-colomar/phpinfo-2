@@ -5,8 +5,9 @@
 
 name: CI
 env:
-        compose: etc/swarm/manifests/phpinfo-2.yaml
         project: phpinfo-2
+        swarm_compose: etc/swarm/manifests/${project}.yaml
+        kube_compose: etc/kubernetes/manifests/${project}.yaml
 on:
         push:
                 branches:
@@ -50,17 +51,15 @@ jobs:
                         run: docker swarm init --advertise-addr lo
                 -
                         name: sed
-                        run: sed -i /image:/s/latest/testing/ ${compose}
+                        run: sed -i /image:/s/latest/testing/ ${swarm_compose}
                 -
                         name: sed2
-                        run: sed -i /node.role/s/worker/manager/ ${compose}
+                        run: sed -i /node.role/s/worker/manager/ ${swarm_compose}
                         # Deploy in Openshift
                         # oc apply -f ${compose}
-                        # Deploy in Kubernetes
-                        # 
                 -
                         name: deploy
-                        run: docker stack deploy -c ${compose} ${project}
+                        run: docker stack deploy -c ${swarm_compose} ${project}
                 -
                         name: docker service ls
                         run: |
@@ -97,30 +96,58 @@ jobs:
                                 sudo systemctl enable --now kubelet
                 -
                         name: init kubernetes
-                        run: docker build -t ganimedescolomar/phpinfo-2:testing .
+                        run: |
+                                ip_leader=$( ip r | grep default | awk '{ print $9 }' )
+                                echo ${ip_leader} kube-apiserver | sudo tee -a /etc/hosts
+                                sudo swapoff --all
+                                sudo kubeadm init --upload-certs --control-plane-endpoint kube-apiserver --pod-network-cidr 192.168.0.0/16 --ignore-preflight-errors all
                 -
-                        name: sed
-                        run: sed -i /image:/s/latest/testing/ ${compose}
+                        name: create network
+                        run: sudo kubectl apply -f https://docs.projectcalico.org/v3.17/manifests/calico.yaml
                 -
-                        name: sed2
-                        run: sed -i /node.role/s/worker/manager/ ${compose}
-                        # Deploy in Openshift
-                        # oc apply -f ${compose}
-                        # Deploy in Kubernetes
-                        # 
+                        name: credentials
+                        run: |
+                                mkdir -p ${HOME}/.kube
+                                sudo cp /etc/kubernetes/admin.conf ${HOME}/.kube/config
+                                sudo chown -R $( id -u ):( id -g ) ${HOME}/.kube
+                -
+                        name: edit kube_compose
+                        run: |
+                                sed -i /image:/s/latest/testing/ ${kube_compose}
+                                sed -i /imagePullPolicy/s/Always/Never/ ${kube_compose}
+                -
+                        name: wait cluster
+                        run: |
+                                while true; do
+                                        kubectl get node | grep Ready | grep -v NotReady && break;
+                                        sleep 10;
+                                done;
+                -
+                        name: clean config
+                        run: |
+                                sudo sed -i /kube-apiserver/d /etc/hosts
+                                sudo sed -i /127.0.0.1.*localhost/s/$/' 'kube-apiserver/ /etc/hosts
+                -
+                        name: enable master
+                        run: |
+                                master=$( kubectl get node | grep master | awk '{ print $1 }' )
+                                kubectl taint node ${master} node-role.kubernetes.io/master:NoSchedule-
                 -
                         name: deploy
-                        run: docker stack deploy -c ${compose} ${project}
+                        run: kubectl apply -f ${kube_compose}
                 -
-                        name: wait Up
+                        name: kubectl get deploy
                         run: |
                                 while true; do
                                         sleep 10;
-                                        docker service ls | grep "${project}.*\([0-9]\)/\1" && break
+                                        kubectl get deploy | grep "${project}.*\([0-9]\)/\1" && break
                                 done;
+                -
+                        name: kubectl logs deploy
+                        run: |
                                 while true; do
                                         sleep 10;
-                                        docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server started' && break
+                                        kubectl logs deploy/${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break
                                 done;
 
 
