@@ -1,2 +1,2 @@
 <?php phpinfo();?>
-# prueba
+# prueba 1
